@@ -6,7 +6,7 @@ This is for using the Ti-Nspire([link](https://education.ti.com/fr/products/calc
 Codewalrus thread: [link](https://codewalr.us/index.php?topic=2299)
 
 
-## Build yourself
+## Build yourself from source
 
 StackEdit stores your files in your browser, which means all your files are automatically saved locally and are accessible **offline!**
 
@@ -29,6 +29,7 @@ After you have clone the repo:
     make
    Output file for the ti is `helloworld-cpp.tns`
 
+   
 ## ToDo's
 ### Infrared
  - Everything related to ir (/nspire-client/uart_ir) + app
@@ -36,4 +37,7 @@ After you have clone the repo:
 
 ### App
 -	Correct bugs and **rare** random crashes :)
+
+### Other
+-	Add stl files for shield
 
