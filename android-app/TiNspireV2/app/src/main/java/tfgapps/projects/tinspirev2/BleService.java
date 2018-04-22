@@ -10,12 +10,15 @@ import android.app.PendingIntent;
 import android.app.ProgressDialog;
 import android.app.Service;
 import android.content.ContentResolver;
+import android.content.Context;
 import android.database.Cursor;
 import android.graphics.BitmapFactory;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.content.Intent;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Binder;
@@ -37,6 +40,7 @@ import android.widget.Toast;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
@@ -112,18 +116,21 @@ public class BleService extends Service {
                 messengerHandler.postDelayed(new Runnable(){
                     public void run(){
                         if(chkMessenger.isChecked()) {
-                            checkUnread();
-                            if(!serverAvalible("http://127.0.0.1:5000")) {
+                            if(!serverAvalible(getApplicationContext(),"http://127.0.0.1:5000")) {
                                 exceptionManager("SRV_START","onStartCommand.messengerHandler",new Exception("server unreachable"));
                                 runOnUiThread(new Runnable() { @Override public void run() { chkMessenger.setChecked(false);}});
                             }
+                            if(chkMessenger.isChecked()) { checkUnread(); }
                         }
-                        messengerHandler.postDelayed(this, messengerUpdateDelay);
+                        if(messaging.getInstance().isMyServiceRunning(BleService.class));{
+                            messengerHandler.postDelayed(this, messengerUpdateDelay);
+                        }
                     }
                 }, messengerUpdateDelay);
-                if(!serverAvalible("http://127.0.0.1:5000")) {
+                if(!serverAvalible(getApplicationContext(),"http://127.0.0.1:5000")) {
                     exceptionManager("SRV_START","onStartCommand",new Exception("server unreachable"));
                     runOnUiThread(new Runnable() { @Override public void run() { chkMessenger.setChecked(false);}});
+                    updateUI_Log("messenger unreachable (127.0.0.1:5000)");
                 } else  {
                     updateUI_Log("Connected to messenger API server (127.0.0.1:5000)");
                 }
@@ -146,8 +153,9 @@ public class BleService extends Service {
 
     @Override
     public void onDestroy() { destroy(); }
+    boolean hasSaidDestroyed = false;
     private void destroy() {
-        updateUI_Log("Service Destroyed");
+        if(!hasSaidDestroyed) { updateUI_Log("Service Destroyed"); hasSaidDestroyed=true;}
         if (btSocket!=null) //If the btSocket is busy
         {
             try
@@ -360,11 +368,17 @@ public class BleService extends Service {
     }
     public boolean onUnbind() { /* throw new RuntimeException("Stub!"); */ return true;}
 
-    boolean serverAvalible(String url) {
-        ShellExecuter exe = new ShellExecuter();
-        String outp = exe.Executer("curl "+url);
-        if(outp.contains("Connection refused")) { return false; } else { return true; }
+    static public boolean serverAvalible(Context context, String url) {
+        Runtime runtime = Runtime.getRuntime();
+        try {
+            Process ipProcess = runtime.exec("curl "+url);
+            int     exitValue = ipProcess.waitFor();
+            return (exitValue == 0);
+        } catch (IOException | InterruptedException e) { e.printStackTrace(); }
+        return false;
     }
+
+
     public void exceptionManager(String tag, String function, Exception e) {
         if(function.contains("StringRequest") && e.getMessage().contains("null")) { return; }   //404Error
         if(function.contains("onStartCommand") && e.getMessage().contains("unreachable")) { return; }   //404Error

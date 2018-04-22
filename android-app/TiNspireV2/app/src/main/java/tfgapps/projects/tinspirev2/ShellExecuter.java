@@ -25,7 +25,7 @@ public class ShellExecuter {
 
             String line = "";
             while ((line = reader.readLine())!= null) {
-                output.append(line + "n");
+                output.append(line + "");
             }
 
         } catch (Exception e) {
