@@ -1,3 +1,4 @@
+
 # nspire-communication
 
 Ti-Nspire SMS / Messenger / Infrared addon programms.
@@ -5,6 +6,10 @@ Ti-Nspire SMS / Messenger / Infrared addon programms.
 This is for using the Ti-Nspire([link](https://education.ti.com/fr/products/calculators/graphing-calculators/ti-nspire-cx)) to send SMS / message via messenger. 
 Codewalrus thread: [link](https://codewalr.us/index.php?topic=2299)
 
+First some pictures:
+![](https://github.com/TurtleForGaming/nspire-communication/raw/master/img/IMG_20180422_230404.jpg)
+![](https://github.com/TurtleForGaming/nspire-communication/raw/master/img/IMG_20180422_230429.jpg)
+(Video is comming)
 
 ## Build yourself from source
 
