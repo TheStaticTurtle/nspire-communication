@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">TiNspireV2</string>
+    <string name="txt_ble_available">Available devices:</string>
+    <string name="title_activity_messaging">messaging</string>
+</resources>
