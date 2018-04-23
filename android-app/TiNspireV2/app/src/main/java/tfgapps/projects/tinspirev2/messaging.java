@@ -222,10 +222,10 @@ public class messaging extends AppCompatActivity {
     }
     public void updateIrRemotes(){
         String path = Environment.getExternalStorageDirectory().toString()+"/Ti-Nspire";
-        Log.wtf("Files", "Path: " + path);
+        Log.d("Files", "Path: " + path);
         File directory = new File(path);
         File[] files = directory.listFiles();
-        Log.wtf("Files", "Size: "+ files.length);
+        Log.d("Files", "Size: "+ files.length);
         List<String> list = new ArrayList<String>();
         ArrayAdapter<String> dataAdapter = new ArrayAdapter<String>(this,
                 android.R.layout.simple_spinner_item, list);
@@ -234,7 +234,7 @@ public class messaging extends AppCompatActivity {
         {
             String fname=files[i].getName();
             if(!fname.equals("links.json")) {
-                Log.wtf("Files", "FileName:" + files[i].getName());
+                Log.d("Files", "FileName:" + files[i].getName());
                 dataAdapter.add(files[i].getName());
             }
         }
