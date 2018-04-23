@@ -1,0 +1,29 @@
+{
+	"keys":{
+		"power"		: "20DF10EF",
+		"srcsearch"	: "20DFD02F",
+		"srccomput"	: "00000000",
+		"srcvideo"	: "00000000",
+		"Freeze"	: "00000000",
+		"zoomin"	: "00000000",
+		"zoomout"	: "00000000",
+		"pageup"	: "20DF00FF",
+		"pagedown"	: "20DF807F",
+		"volup"		: "20DF40BF",
+		"voldown"	: "20DFC03F",
+		"up"		: "20DF02FD",
+		"down"		: "20DF827D",
+		"left"		: "20DFE01F",
+		"right"		: "20DF609F",
+		"enter"		: "20DF22DD",
+		"menu"		: "20DFC23D",
+		"esc"		: "20DF14EB",
+		"mute"		: "20DF906F",
+		"blank"		: "00000000"
+	},
+	"info":{
+		"ircodec"	: "NEC",
+		"name"		: "LG-TV",
+		"model"		: "42LB650V-ZH"
+	}
+}
