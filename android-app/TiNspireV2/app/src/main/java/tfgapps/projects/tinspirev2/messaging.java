@@ -11,6 +11,7 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
@@ -22,14 +23,17 @@ import android.util.Log;
 import android.util.Pair;
 import android.view.MotionEvent;
 import android.view.View;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.ScrollView;
+import android.widget.Spinner;
 import android.widget.TextView;
 
 import org.w3c.dom.Text;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -63,6 +67,8 @@ public class messaging extends AppCompatActivity {
     Button btnClear;
     TextView txtLog;
     ScrollView scroll;
+    Spinner spinnerIr;
+    Button btnIrUpdate;
     public CheckBox checkSMS;
     public CheckBox checkMESSENGER;
     public CheckBox checkIR;
@@ -90,6 +96,9 @@ public class messaging extends AppCompatActivity {
         checkSMS = (CheckBox) findViewById(R.id.checkBoxSMS);
         checkMESSENGER = (CheckBox) findViewById(R.id.checkBoxMESSENGER);
         checkIR = (CheckBox) findViewById(R.id.checkBoxIr);
+        spinnerIr = (Spinner) findViewById(R.id.spinnerIrRemotes);
+        btnIrUpdate = (Button) findViewById(R.id.buttonUpdateIr);
+
         checkMESSENGER.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) { }
@@ -97,6 +106,10 @@ public class messaging extends AppCompatActivity {
         btnCommand.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) { myServiceBinder.sendOverBle(etCommand.getText().toString()); }
+        });
+        btnIrUpdate.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) { updateIrRemotes(); }
         });
         btnClear.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -119,6 +132,7 @@ public class messaging extends AppCompatActivity {
         btnStop.setEnabled(false);
         btnCommand.setEnabled(false);
         sInstance = this;
+        updateIrRemotes();
     }
 
     public boolean isMyServiceRunning(Class<?> serviceClass) {
@@ -130,32 +144,26 @@ public class messaging extends AppCompatActivity {
         }
         return false;
     }
-
     public static messaging getInstance() {
         return sInstance ;
     }
-
     private static messaging sInstance = null;
-
     @Override
     protected void onStop() {
         super.onStop();
         //unbindService(mConnection);
     }
-
+    @Override
     public void onBackPressed() {
         super.onBackPressed();
         stopThread();
     }
-
     public void onServiceDestroy() {
         stopThread();
     }
-
     public static messaging instance() {
         return inst;
     }
-
     public void exceptionManager(final String activity,final String tag, final String function, final Exception e) {
         runOnUiThread(new Runnable() {
             @Override
@@ -179,7 +187,6 @@ public class messaging extends AppCompatActivity {
         if (permissionGetMessage != PackageManager.PERMISSION_GRANTED) { listPermissionsNeeded.add(Manifest.permission.RECEIVE_SMS);  }
         if (!listPermissionsNeeded.isEmpty()) { ActivityCompat.requestPermissions(this, listPermissionsNeeded.toArray(new String[listPermissionsNeeded.size()]),PERMISSION_REQUEST_CODE);            /*return false; */ }
     }
-
     public void startThread() {
         Intent i = new Intent(this, BleService.class);
         i.putExtra("address",address);
@@ -191,7 +198,6 @@ public class messaging extends AppCompatActivity {
         if (myService == null) { doBindService(); }
         if (myService == null) { doBindService(); }
     }
-
     public void stopThread() {
         if (myService != null) {  unbindService(myConnection); myService = null; }
         if (myService != null) {  unbindService(myConnection); myService = null; }
@@ -214,17 +220,34 @@ public class messaging extends AppCompatActivity {
             exceptionManager("messaging","UI_UPDATE","updateUI_Log",e);
         }
     }
-
+    public void updateIrRemotes(){
+        String path = Environment.getExternalStorageDirectory().toString()+"/Ti-Nspire";
+        Log.wtf("Files", "Path: " + path);
+        File directory = new File(path);
+        File[] files = directory.listFiles();
+        Log.wtf("Files", "Size: "+ files.length);
+        List<String> list = new ArrayList<String>();
+        ArrayAdapter<String> dataAdapter = new ArrayAdapter<String>(this,
+                android.R.layout.simple_spinner_item, list);
+        dataAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        for (int i = 0; i < files.length; i++)
+        {
+            String fname=files[i].getName();
+            if(!fname.equals("links.json")) {
+                Log.wtf("Files", "FileName:" + files[i].getName());
+                dataAdapter.add(files[i].getName());
+            }
+        }
+        spinnerIr.setAdapter(dataAdapter);
+    }
 
     public BleService myServiceBinder;
     public ServiceConnection myService = null;
-
     public void sendToBind(String txt) {
         if (myService != null) {
             myServiceBinder.sendOverBle(txt);
         }
     }
-
     public ServiceConnection myConnection = new ServiceConnection() {
         public void onServiceConnected(ComponentName className, IBinder binder) {
             myServiceBinder = ((BleService.MyBinder) binder).getService();
@@ -237,19 +260,15 @@ public class messaging extends AppCompatActivity {
             myService = null;
         }
     };
-
     public Handler myHandler = new Handler() {
-        public void handleMessage(Message message) {
-            Bundle data = message.getData();
+        public void handleMessage(Message message) { Bundle data = message.getData();
         }
     };
-
     public void onDestroy() {
         super.onDestroy();
         stopThread();
 
     }
-
     public void doBindService() {
         try {
             Intent intent = null;

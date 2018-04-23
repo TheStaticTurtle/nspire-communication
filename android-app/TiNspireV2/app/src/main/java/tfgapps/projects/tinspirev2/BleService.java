@@ -22,6 +22,7 @@ import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Binder;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Bundle;
@@ -36,12 +37,19 @@ import android.view.View;
 import android.widget.CheckBox;
 import android.widget.ScrollView;
 import android.widget.SearchView;
+import android.widget.Spinner;
 import android.widget.Toast;
+
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.MappedByteBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -87,6 +95,8 @@ public class BleService extends Service {
     final int messengerUpdateDelay = 800; //milliseconds
     CheckBox chkMessenger ;
     CheckBox chkSms ;
+    CheckBox chkIr ;
+    Spinner spinnerIr;
     RequestQueue requestQueue;
     List<Pair<String, String>> currentContactList = new ArrayList<>();
 
@@ -101,6 +111,8 @@ public class BleService extends Service {
         updateUI_Log("The New Service is starting");
         chkMessenger = messaging.getInstance().checkMESSENGER;
         chkSms = messaging.getInstance().checkSMS;
+        chkIr = messaging.getInstance().checkIR;
+        spinnerIr = messaging.getInstance().spinnerIr;
         // For each start request, send a message to start a job and deliver the
         // start ID so we know which request we're stopping when we finish the job
 
@@ -458,64 +470,6 @@ public class BleService extends Service {
             exceptionManager("SMS_NEW","newSms",e);
         }
     }
-    public void bleMessgeSMS(String Message) {
-        try {
-            Message = Message.replace("\r", "");
-            Message = Message.replace("\n", "");
-            if (Message.startsWith("$#$UPDATENUM:")) {
-                if(!chkSms.isChecked()) { sendOverBle("%%|NUMS|1|SMS desactivated use -1"); return; }
-                currentContactList = getContacts(Message.substring(13));
-                if (currentContactList == null || currentContactList.isEmpty()) {
-                    sendOverBle("%%|NUMS|1|None");
-                } else {
-                    String respondCurrentTxt = "%%|NUMS|";
-                    int size = currentContactList.size();
-                    String respondnewText = respondCurrentTxt + String.valueOf(size);
-
-                    for (Pair<String, String> l : currentContactList) {
-                        respondnewText = respondnewText + "|" + l.first;
-                        updateUI_Log("Contact found: " + l.first + ", " + l.second);
-                    }
-                    respondnewText = respondnewText + "\r";
-
-                    sendOverBle(respondnewText);
-                }
-                //sendToast(msg.substring(13, msg.length()));
-            }
-            if (Message.startsWith("$#$CHANGENUM:")) {
-                if(!chkSms.isChecked()) { sendOverBle("%%|NUMS|1|SMS desactivated use -1"); return; }
-                List<Pair<String, String>> tmp = new ArrayList<>();
-                tmp = getContacts(Message.substring(13));
-                String name = tmp.get(0).first;
-                String numb = tmp.get(0).second;
-                currentContactName = name;
-                currentContactNum = numb;
-                updateUI_Log("Changing to: " + name + "-" + numb);
-            }
-            if (Message.startsWith("$#$SMS:")) {
-                if(!chkSms.isChecked()) { sendOverBle("%%|NUMS|1|SMS desactivated use -1"); return; }
-                sendSMS(Message.substring(7));
-                updateUI_Log("Send sms: " + Message.substring(7));
-                //sendToast(msg.substring(7, msg.length()));
-            }
-            if (Message.startsWith("$#$HELP:ME")) {
-                sendOverBle("Avalible commands:");
-                sendOverBle("  - $#$UPDATENUM: \t Search contact");
-                sendOverBle("  - $#$CHANGENUM: \t Change contact");
-                sendOverBle("  - #$#CALC:ENTERING:SMS: \t Enter");
-                sendOverBle("  - #$#CALC:LEAVING:SMS: \t Leave");
-                sendOverBle("  - $#$HELP:ME \t This message");
-                updateUI_Log("Avalible commands:");
-                updateUI_Log("  - $#$UPDATENUM: \t Search contact");
-                updateUI_Log("  - $#$CHANGENUM: \t Change contact");
-                updateUI_Log("  - #$#CALC:ENTERING:SMS: \t Enter");
-                updateUI_Log("  - #$#CALC:LEAVING:SMS: \t Leave");
-                updateUI_Log("  - $#$HELP:ME \t This message");
-            }
-        } catch (Exception e) {
-            exceptionManager("BLE_NEW", "newBleMessage", e);
-        }
-    }
 
     void checkUnread() {
         if(!chkMessenger.isChecked()) { searchContactsRetrieve("%%|NUMS|1|Messenger desactivated use -1"); return;}
@@ -674,6 +628,53 @@ public class BleService extends Service {
                 });
         requestQueue.add(stringRequest);
     }
+
+    void irLookup(String key) {
+        String jsonFile = Environment.getExternalStorageDirectory().toString()+"/Ti-Nspire/"+spinnerIr.getSelectedItem();
+        String jsonStr = "[]";
+        try {
+            FileInputStream stream = new FileInputStream(new File(jsonFile));
+            try {
+                FileChannel fc = stream.getChannel();
+                MappedByteBuffer bb = fc.map(FileChannel.MapMode.READ_ONLY, 0, fc.size());
+                jsonStr = Charset.defaultCharset().decode(bb).toString();
+            } catch (Exception e) {
+                e.printStackTrace();
+            } finally { try { stream.close(); } catch (Exception e) { e.printStackTrace();}}
+        } catch (Exception e) { e.printStackTrace();}
+
+        try {
+            JSONObject f = new JSONObject(jsonStr);
+            JSONObject keys = f.getJSONObject("keys");
+            JSONObject info = f.getJSONObject("info");
+            String irCode = keys.getString(key);
+            String irCodec = info.getString("ircodec");
+            sendIr(irCodec,irCode,true);
+        } catch (JSONException e) {
+            String m = e.getMessage();
+            if(m.contains("No value for")) {
+                sendIr("NEC","00000000",false);
+            }
+        }
+    }
+    public void sendIr(String codec,String code,boolean found) {
+        sendOverBle("IR:"+code+":"+codec);
+        //sendToast("IR:"+code+":"+codec);
+    }
+
+    public void newBleMessage(String Message) {
+        if (Message.startsWith("#$#CALC:ENTERING")) {
+            if(Message.contains("ING:SMS")) { calcMode = "SMS"; sendOverBle("Welcome SMS");}
+            if(Message.contains("ING:MES")) { calcMode = "MESSENGER"; sendOverBle("Welcome MESSENGER");}
+            isCalcHere = true;  updateUI_Log("Calc here");
+        }
+        if (Message.startsWith("#$#CALC:LEAVING")) { isCalcHere = false; updateUI_Log("Calc out"); }
+
+        bleMessgeSMS(Message);
+        bleMessgeMES(Message);
+        bleMessgeIR(Message);
+        updateUI_Log(Message);
+    }
     public void bleMessgeMES(String Message) {
         try {
             Message = Message.replace("\r", "");
@@ -694,18 +695,76 @@ public class BleService extends Service {
             exceptionManager("BLE_NEW", "newBleMessage", e);
         }
     }
+    public void bleMessgeSMS(String Message) {
+        try {
+            Message = Message.replace("\r", "");
+            Message = Message.replace("\n", "");
+            if (Message.startsWith("$#$UPDATENUM:")) {
+                if(!chkSms.isChecked()) { sendOverBle("%%|NUMS|1|SMS desactivated use -1"); return; }
+                currentContactList = getContacts(Message.substring(13));
+                if (currentContactList == null || currentContactList.isEmpty()) {
+                    sendOverBle("%%|NUMS|1|None");
+                } else {
+                    String respondCurrentTxt = "%%|NUMS|";
+                    int size = currentContactList.size();
+                    String respondnewText = respondCurrentTxt + String.valueOf(size);
 
-    public void newBleMessage(String Message) {
-        if (Message.startsWith("#$#CALC:ENTERING")) {
-            if(Message.contains("ING:SMS")) { calcMode = "SMS"; sendOverBle("Welcome SMS");}
-            if(Message.contains("ING:MES")) { calcMode = "MESSENGER"; sendOverBle("Welcome MESSENGER");}
-            isCalcHere = true;  updateUI_Log("Calc here");
+                    for (Pair<String, String> l : currentContactList) {
+                        respondnewText = respondnewText + "|" + l.first;
+                        updateUI_Log("Contact found: " + l.first + ", " + l.second);
+                    }
+                    respondnewText = respondnewText + "\r";
+
+                    sendOverBle(respondnewText);
+                }
+                //sendToast(msg.substring(13, msg.length()));
+            }
+            if (Message.startsWith("$#$CHANGENUM:")) {
+                if(!chkSms.isChecked()) { sendOverBle("%%|NUMS|1|SMS desactivated use -1"); return; }
+                List<Pair<String, String>> tmp = new ArrayList<>();
+                tmp = getContacts(Message.substring(13));
+                String name = tmp.get(0).first;
+                String numb = tmp.get(0).second;
+                currentContactName = name;
+                currentContactNum = numb;
+                updateUI_Log("Changing to: " + name + "-" + numb);
+            }
+            if (Message.startsWith("$#$SMS:")) {
+                if(!chkSms.isChecked()) { sendOverBle("%%|NUMS|1|SMS desactivated use -1"); return; }
+                sendSMS(Message.substring(7));
+                updateUI_Log("Send sms: " + Message.substring(7));
+                //sendToast(msg.substring(7, msg.length()));
+            }
+            if (Message.startsWith("$#$HELP:ME")) {
+                sendOverBle("Avalible commands:");
+                sendOverBle("  - $#$UPDATENUM: \t Search contact");
+                sendOverBle("  - $#$CHANGENUM: \t Change contact");
+                sendOverBle("  - #$#CALC:ENTERING:SMS: \t Enter");
+                sendOverBle("  - #$#CALC:LEAVING:SMS: \t Leave");
+                sendOverBle("  - $#$HELP:ME \t This message");
+                updateUI_Log("Avalible commands:");
+                updateUI_Log("  - $#$UPDATENUM: \t Search contact");
+                updateUI_Log("  - $#$CHANGENUM: \t Change contact");
+                updateUI_Log("  - #$#CALC:ENTERING:SMS: \t Enter");
+                updateUI_Log("  - #$#CALC:LEAVING:SMS: \t Leave");
+                updateUI_Log("  - $#$HELP:ME \t This message");
+            }
+        } catch (Exception e) {
+            exceptionManager("BLE_NEW", "newBleMessage", e);
         }
-        if (Message.startsWith("#$#CALC:LEAVING")) { isCalcHere = false; updateUI_Log("Calc out"); }
-
-        bleMessgeSMS(Message);
-        bleMessgeMES(Message);
-        updateUI_Log(Message);
+    }
+    public void bleMessgeIR(String Message) {
+        try {
+            Message = Message.replace("\r", "");
+            Message = Message.replace("\n", "");
+            if (Message.startsWith("$#$IR:")) {
+                if(!chkIr.isChecked()) { sendOverBle("IR desactivated"); return; }
+                String key = Message.substring(6);
+                irLookup(key);
+            }
+        } catch (Exception e) {
+            exceptionManager("BLE_NEW", "newBleMessage", e);
+        }
     }
 
 }
