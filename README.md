@@ -61,7 +61,7 @@ Schematic comming soon
 
 ### ToDo's
 #### Infrared
- - Everything related to ir (/nspire-client/uart_ir) + app
+ - Ir on calc side (/nspire-client/uart_ir)
  - Get Ir codes of videos projectors /tv
 
 #### App
